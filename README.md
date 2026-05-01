@@ -40,6 +40,8 @@ All nine sensors feed their data into the microcontroller — we're using an **A
 - All 9 sensors are connected to the ESP32
 - ESP32 reads all sensor values every **2.5 seconds**
 - It sends the data to the server via **HTTP POST request**
+  <img width="1135" height="944" alt="Gemini_Generated_Image_modti8modti8modt" src="https://github.com/user-attachments/assets/6ecc3a87-78be-4d7c-8d6a-d9b60fa8b808" />
+
 
 ---
 
@@ -147,6 +149,7 @@ Since we can't wait for a real earthquake or landslide in the lab, this module l
 The most exciting part of our roadmap is a **safe route planning feature for Sri Lanka**. We plan to:
 
 - Mark on a map all historically known flood-prone and landslide-prone areas across the island
+
 - When a user wants to travel to a destination, the system will check if their planned route passes through any active disaster zones
 - If it does, they'll receive an alert and be shown a safer alternate route
 
