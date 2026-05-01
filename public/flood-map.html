@@ -1,0 +1,1018 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sri Lanka Flood & Landslide Safe Route Planning</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            min-height: 100vh;
+            transition: all 0.3s ease;
+        }
+        
+        body.dark-mode {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: #ecf0f1;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        body.dark-mode .header {
+            color: #ecf0f1;
+        }
+        
+        .header h1 {
+            font-size: 2.2em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .header-actions {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .theme-toggle {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            color: white;
+            cursor: pointer;
+            font-size: 1em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+        }
+        
+        body.dark-mode .theme-toggle {
+            background: rgba(255,255,255,0.1);
+            color: #ecf0f1;
+        }
+        
+        .theme-toggle:hover {
+            background: rgba(255,255,255,0.3);
+            transform: scale(1.05);
+        }
+        
+        .back-button {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            color: white;
+            cursor: pointer;
+            font-size: 1em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+            text-decoration: none;
+        }
+        
+        body.dark-mode .back-button {
+            background: rgba(255,255,255,0.1);
+            color: #ecf0f1;
+        }
+        
+        .back-button:hover {
+            background: rgba(255,255,255,0.3);
+            transform: scale(1.05);
+        }
+        
+        .map-container {
+            background: white;
+            border-radius: 15px;
+            padding: 0;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            overflow: hidden;
+            height: 80vh;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        body.dark-mode .map-container {
+            background: #2c3e50;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        }
+        
+        #map {
+            height: 100%;
+            width: 100%;
+        }
+        
+        /* Route Planning Toggle Button - MOVED TO TOP LEFT */
+        .route-toggle-btn {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 1001;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            transition: all 0.3s ease;
+            font-size: 24px;
+        }
+        
+        .route-toggle-btn:hover {
+            background: #2980b9;
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+        }
+
+        .route-toggle-btn.active {
+            background: #e74c3c;
+        }
+        
+        /* Control Panel with Sliding Animation */
+        .control-panel {
+            position: absolute;
+            top: 60px;
+            left: 30px;
+            z-index: 1000;
+            background: white;
+            padding: 15px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            min-width: 250px;
+            transition: all 0.3s ease;
+            transform: translateX(0);
+            border: 2px solid #3498db;
+        }
+        
+        .control-panel.hidden {
+            transform: translateX(calc(-100% - 20px));
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        body.dark-mode .control-panel {
+            background: #2c3e50;
+            color: #ecf0f1;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+            border: 2px solid #2980b9;
+        }
+        
+        .control-panel h3 {
+            margin-bottom: 12px;
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+            font-size: 1.3em;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        
+        body.dark-mode .control-panel h3 {
+            color: #ecf0f1;
+            border-bottom-color: #2980b9;
+        }
+        
+        .control-group {
+            margin-bottom: 12px;
+        }
+        
+        .control-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #2c3e50;
+            font-size: 1em;
+            transition: all 0.3s ease;
+        }
+        
+        body.dark-mode .control-group label {
+            color: #ecf0f1;
+        }
+        
+        .control-group input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 2px solid #bdc3c7;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            background: white;
+        }
+        
+        .control-group input:focus {
+            border-color: #3498db;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+            outline: none;
+        }
+        
+        body.dark-mode .control-group input {
+            background: #34495e;
+            border-color: #4a6278;
+            color: #ecf0f1;
+        }
+        
+        body.dark-mode .control-group input:focus {
+            border-color: #2980b9;
+            box-shadow: 0 0 0 2px rgba(41, 128, 185, 0.3);
+        }
+        
+        .location-buttons {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+        
+        .btn-location {
+            flex: 1;
+            padding: 10px 12px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            font-size: 13px;
+            box-shadow: 0 3px 10px rgba(46, 204, 113, 0.3);
+        }
+        
+        .btn-location:hover {
+            background: linear-gradient(135deg, #27ae60, #219653);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(46, 204, 113, 0.4);
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            font-size: 14px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #2980b9, #2573a7);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
+        }
+        
+        .btn-secondary {
+            background: linear-gradient(135deg, #95a5a6, #7f8c8d);
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: linear-gradient(135deg, #7f8c8d, #6c7b7d);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(149, 165, 166, 0.4);
+        }
+        
+        .status-panel {
+            margin-top: 15px;
+            padding: 15px;
+            background: linear-gradient(135deg, rgba(52, 152, 219, 0.15), rgba(52, 152, 219, 0.1));
+            border-radius: 10px;
+            border-left: 4px solid #3498db;
+            transition: all 0.3s ease;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+        
+        body.dark-mode .status-panel {
+            background: linear-gradient(135deg, rgba(52, 152, 219, 0.25), rgba(52, 152, 219, 0.15));
+        }
+        
+        .status-panel.alert {
+            background: linear-gradient(135deg, rgba(231, 76, 60, 0.15), rgba(231, 76, 60, 0.1));
+            border-left-color: #e74c3c;
+            animation: pulse 2s infinite;
+        }
+        
+        body.dark-mode .status-panel.alert {
+            background: linear-gradient(135deg, rgba(231, 76, 60, 0.25), rgba(231, 76, 60, 0.15));
+        }
+        
+        /* SMALLER Risk Legend */
+        .risk-legend {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+            background: white;
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transition: all 0.3s ease;
+            min-width: 140px;
+            max-width: 140px;
+        }
+        
+        body.dark-mode .risk-legend {
+            background: #2c3e50;
+            color: #ecf0f1;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        
+        .risk-legend h4 {
+            margin-bottom: 2px;
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 2px;
+            font-size: 0.75em;
+            font-weight: bold;
+        }
+        
+        body.dark-mode .risk-legend h4 {
+            color: #ecf0f1;
+            border-bottom-color: #2980b9;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.2px;
+            padding: 6px;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+        }
+        
+        .legend-item:hover {
+            background: rgba(52, 152, 219, 0.1);
+        }
+        
+        body.dark-mode .legend-item:hover {
+            background: rgba(52, 152, 219, 0.2);
+        }
+        
+        .legend-color {
+            width: 10px;
+            height: 10px;
+            border-radius: 1px;
+            margin-right: 6px;
+            border: 1px solid;
+        }
+        
+        .legend-text {
+            font-size: 8px;
+            font-weight: 300;
+        }
+        
+        /* CORRECTED COLORS */
+        .legend-high-risk { background-color: rgba(231, 76, 60, 0.7); border-color: #e74c3c; }
+        .legend-flood { background-color: rgba(52, 152, 219, 0.7); border-color: #3498db; }
+        .legend-landslide { background-color: rgba(243, 156, 18, 0.7); border-color: #f39c12; }
+        
+        /* FIX FOR LEAFLET ROUTING MACHINE IN DARK MODE */
+        .leaflet-routing-container {
+            background: white;
+            color: #333;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        body.dark-mode .leaflet-routing-container {
+            background: #2c3e50 !important;
+            color: #ecf0f1 !important;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3) !important;
+        }
+        
+        body.dark-mode .leaflet-routing-container h2 {
+            color: #ecf0f1 !important;
+        }
+        
+        body.dark-mode .leaflet-routing-container h3 {
+            color: #ecf0f1 !important;
+        }
+        
+        body.dark-mode .leaflet-routing-alt {
+            background: #34495e !important;
+            color: #ecf0f1 !important;
+        }
+        
+        body.dark-mode .leaflet-routing-alt table {
+            color: #ecf0f1 !important;
+        }
+        
+        body.dark-mode .leaflet-routing-alt tr:hover {
+            background: #3d566e !important;
+        }
+        
+        body.dark-mode .leaflet-bar {
+            background: #2c3e50 !important;
+            border-color: #4a6278 !important;
+        }
+        
+        body.dark-mode .leaflet-bar a {
+            background: #2c3e50 !important;
+            border-bottom-color: #4a6278 !important;
+            color: #ecf0f1 !important;
+        }
+        
+        body.dark-mode .leaflet-bar a:hover {
+            background: #34495e !important;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+            100% { transform: scale(1); }
+        }
+
+        /* Enhanced popup styling */
+        .risk-popup {
+            min-width: 250px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .risk-popup h3 {
+            margin-bottom: 8px;
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 4px;
+            font-size: 1.1em;
+        }
+        
+        .risk-popup p {
+            margin-bottom: 6px;
+            line-height: 1.3;
+            font-size: 0.9em;
+        }
+        
+        .risk-popup .severity {
+            font-weight: bold;
+            padding: 3px 6px;
+            border-radius: 3px;
+            display: inline-block;
+            margin-top: 4px;
+            font-size: 0.8em;
+        }
+        
+        .severity-high {
+            background: #e74c3c;
+            color: white;
+        }
+        
+        .severity-medium {
+            background: #f39c12;
+            color: white;
+        }
+        
+        .severity-critical {
+            background: #c0392b;
+            color: white;
+            animation: pulse 1.5s infinite;
+        }
+    </style>
+</head>
+<body class="light-mode">
+    <div class="container">
+        <div class="header">
+            <div>
+                <h1>Sri Lanka Flood & Landslide Safe Routes</h1>
+                <p>Navigate safely around disaster-prone areas</p>
+            </div>
+            <div class="header-actions">
+                <button class="theme-toggle" onclick="toggleTheme()">
+                    <span id="themeIcon">🌙</span> 
+                    <span id="themeText">Dark Mode</span>
+                </button>
+                <a href="/" class="back-button">
+                    ← Back to Dashboard
+                </a>
+            </div>
+        </div>
+
+        <div class="map-container">
+            <div id="map"></div>
+            
+            <!-- Route Planning Toggle Button - MOVED TO TOP LEFT -->
+            <button class="route-toggle-btn" id="routeToggleBtn" onclick="toggleRoutePanel()">
+                🗺️
+            </button>
+            
+            <!-- Control Panel - MOVED TO LEFT SIDE -->
+            <div class="control-panel hidden" id="routeControlPanel">
+                <h3>Route Planning</h3>
+                
+                <div class="location-buttons">
+                    <button class="btn-location" onclick="getCurrentLocation()">
+                        📍 My Location
+                    </button>
+                </div>
+                
+                <div class="control-group">
+                    <label for="startPoint">Start Location:</label>
+                    <input type="text" id="startPoint" placeholder="e.g., Colombo or 6.9271, 79.8612">
+                </div>
+                <div class="control-group">
+                    <label for="endPoint">End Location:</label>
+                    <input type="text" id="endPoint" placeholder="e.g., Kandy or 7.2906, 80.6337">
+                </div>
+                
+                <div class="button-group">
+                    <button class="btn btn-primary" onclick="findSafeRoute()">Find Route</button>
+                    <button class="btn btn-secondary" onclick="clearRoute()">Clear</button>
+                </div>
+                
+                <div class="status-panel" id="routeStatus">
+                    <strong>Route Status:</strong> Ready to calculate route
+                </div>
+            </div>
+            
+            <!-- SMALLER Risk Legend -->
+            <div class="risk-legend">
+                <h4>Sri Lanka Risk Map</h4>
+                <div class="legend-item">
+                    <div class="legend-color legend-high-risk"></div>
+                    <span class="legend-text">High Risk Areas (Avoid)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color legend-flood"></div>
+                    <span class="legend-text">Flood Prone Areas</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color legend-landslide"></div>
+                    <span class="legend-text">Landslide Risk Zones</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Include external risk data file -->
+    <script src="risk-data.js"></script>
+    
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
+    
+    <script>
+        // Theme Toggle Functionality
+        function toggleTheme() {
+            const body = document.body;
+            const themeIcon = document.getElementById('themeIcon');
+            const themeText = document.getElementById('themeText');
+            
+            if (body.classList.contains('dark-mode')) {
+                // Switch to Light Mode
+                body.classList.remove('dark-mode');
+                themeIcon.textContent = '🌙';
+                themeText.textContent = 'Dark Mode';
+                localStorage.setItem('theme', 'light');
+                updateRoutingPanelTheme('light');
+            } else {
+                // Switch to Dark Mode
+                body.classList.add('dark-mode');
+                themeIcon.textContent = '☀️';
+                themeText.textContent = 'Light Mode';
+                localStorage.setItem('theme', 'dark');
+                updateRoutingPanelTheme('dark');
+            }
+        }
+
+        // Update routing panel theme
+        function updateRoutingPanelTheme(theme) {
+            const routingContainer = document.querySelector('.leaflet-routing-container');
+            if (routingContainer) {
+                if (theme === 'dark') {
+                    routingContainer.style.background = '#2c3e50';
+                    routingContainer.style.color = '#ecf0f1';
+                } else {
+                    routingContainer.style.background = 'white';
+                    routingContainer.style.color = '#333';
+                }
+            }
+        }
+
+        // Route Panel Toggle Functionality
+        function toggleRoutePanel() {
+            const panel = document.getElementById('routeControlPanel');
+            const toggleBtn = document.getElementById('routeToggleBtn');
+            
+            if (panel.classList.contains('hidden')) {
+                // Show the panel
+                panel.classList.remove('hidden');
+                toggleBtn.textContent = '✕';
+                toggleBtn.style.background = '#e74c3c';
+                toggleBtn.classList.add('active');
+            } else {
+                // Hide the panel
+                panel.classList.add('hidden');
+                toggleBtn.textContent = '🗺️';
+                toggleBtn.style.background = '#3498db';
+                toggleBtn.classList.remove('active');
+            }
+        }
+
+        // Load saved theme on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            const themeIcon = document.getElementById('themeIcon');
+            const themeText = document.getElementById('themeText');
+            
+            if (savedTheme === 'dark') {
+                document.body.classList.add('dark-mode');
+                themeIcon.textContent = '☀️';
+                themeText.textContent = 'Light Mode';
+            } else {
+                document.body.classList.remove('dark-mode');
+                themeIcon.textContent = '🌙';
+                themeText.textContent = 'Dark Mode';
+            }
+            
+            // Initialize the map
+            initMap();
+        });
+    </script>
+    <script>
+        // Sri Lanka Flood & Landslide Route Planning
+        let map;
+        let routingControl;
+        let currentMarkers = [];
+        let userLocation = null;
+
+        // Initialize map centered on Sri Lanka
+        function initMap() {
+            // Center on Sri Lanka
+            map = L.map('map').setView([7.8731, 80.7718], 8);
+
+            // Add tile layer
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+
+            // Render risk zones (data is loaded from external file)
+            renderRiskZones();
+            
+            // Add click event for setting points
+            map.on('click', function(e) {
+                const latlng = e.latlng;
+                addMarker(latlng, `Location: ${latlng.lat.toFixed(4)}, ${latlng.lng.toFixed(4)}`);
+            });
+        }
+
+        // RENDER ALL 3 TYPES SEPARATELY using external data
+        function renderRiskZones() {
+            // Clear existing zones
+            map.eachLayer(layer => {
+                if (layer instanceof L.Polygon) {
+                    map.removeLayer(layer);
+                }
+            });
+
+            // 1. Render FLOOD ZONES (BLUE)
+            floodRiskZones.forEach(zone => {
+                const polygon = L.polygon(zone.coordinates, {
+                    color: '#3498db',
+                    fillColor: '#3498db',
+                    fillOpacity: 0.5,
+                    weight: 2,
+                    opacity: 0.7
+                }).addTo(map);
+                
+                polygon.bindPopup(`
+                    <div class="risk-popup">
+                        <h3>🌊 ${zone.name}</h3>
+                        <p><strong>Type:</strong> Flood Prone Area</p>
+                        <p><strong>Description:</strong> ${zone.description}</p>
+                        <p><strong>Affected Areas:</strong> ${zone.affectedAreas.join(', ')}</p>
+                        <p><strong>Risk Level:</strong> <span class="severity severity-${zone.severity.toLowerCase()}">${zone.severity.toUpperCase()}</span></p>
+                        <p><strong>Warning:</strong> Exercise caution during heavy rainfall</p>
+                    </div>
+                `);
+            });
+
+            // 2. Render LANDSLIDE ZONES (ORANGE)
+            landslideRiskZones.forEach(zone => {
+                const polygon = L.polygon(zone.coordinates, {
+                    color: '#f39c12',
+                    fillColor: '#f39c12',
+                    fillOpacity: 0.5,
+                    weight: 2,
+                    opacity: 0.7
+                }).addTo(map);
+                
+                polygon.bindPopup(`
+                    <div class="risk-popup">
+                        <h3>⛰️ ${zone.name}</h3>
+                        <p><strong>Type:</strong> Landslide Risk Zone</p>
+                        <p><strong>Description:</strong> ${zone.description}</p>
+                        <p><strong>Affected Areas:</strong> ${zone.affectedAreas.join(', ')}</p>
+                        <p><strong>Risk Level:</strong> <span class="severity severity-${zone.severity.toLowerCase()}">${zone.severity.toUpperCase()}</span></p>
+                        <p><strong>Warning:</strong> Avoid during heavy rains and seek alternative routes</p>
+                    </div>
+                `);
+            });
+
+            // 3. Render HIGH RISK ZONES (RED)
+            highRiskZones.forEach(zone => {
+                const polygon = L.polygon(zone.coordinates, {
+                    color: '#e74c3c',
+                    fillColor: '#e74c3c',
+                    fillOpacity: 0.6,
+                    weight: 3,
+                    opacity: 0.8
+                }).addTo(map);
+                
+                polygon.bindPopup(`
+                    <div class="risk-popup">
+                        <h3>🚨 ${zone.name}</h3>
+                        <p><strong>Type:</strong> High Risk Area</p>
+                        <p><strong>Description:</strong> ${zone.description}</p>
+                        <p><strong>Affected Areas:</strong> ${zone.affectedAreas.join(', ')}</p>
+                        <p><strong>Risk Level:</strong> <span class="severity severity-${zone.severity.toLowerCase()}">${zone.severity.toUpperCase()}</span></p>
+                        <p><strong>Warning:</strong> 🚨 AVOID THIS AREA COMPLETELY - HIGH DANGER ZONE</p>
+                    </div>
+                `);
+            });
+        }
+
+        // Get user's current location
+        function getCurrentLocation() {
+            const statusPanel = document.getElementById('routeStatus');
+            
+            if (!navigator.geolocation) {
+                statusPanel.innerHTML = '<strong>Route Status:</strong> ❌ Geolocation is not supported by this browser';
+                statusPanel.classList.add('alert');
+                return;
+            }
+
+            statusPanel.innerHTML = '<strong>Route Status:</strong> 🔄 Detecting your location...';
+            statusPanel.classList.remove('alert');
+
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    userLocation = { lat, lng };
+                    
+                    // Set as start point
+                    document.getElementById('startPoint').value = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+                    
+                    // Add marker and center map
+                    addMarker({ lat, lng }, '<strong>Your Current Location</strong>');
+                    map.setView([lat, lng], 13);
+                    
+                    statusPanel.innerHTML = `<strong>Route Status:</strong> ✅ Location detected`;
+                },
+                function(error) {
+                    let errorMessage = 'Unable to retrieve your location';
+                    switch(error.code) {
+                        case error.PERMISSION_DENIED:
+                            errorMessage = 'Location access denied. Please allow location access.';
+                            break;
+                        case error.POSITION_UNAVAILABLE:
+                            errorMessage = 'Location information unavailable.';
+                            break;
+                        case error.TIMEOUT:
+                            errorMessage = 'Location request timed out.';
+                            break;
+                    }
+                    statusPanel.innerHTML = `<strong>Route Status:</strong> ❌ ${errorMessage}`;
+                    statusPanel.classList.add('alert');
+                }
+            );
+        }
+
+        // Add marker to map
+        function addMarker(latlng, popupText) {
+            const marker = L.marker(latlng).addTo(map)
+                .bindPopup(popupText)
+                .openPopup();
+            
+            currentMarkers.push(marker);
+            return marker;
+        }
+
+        // Find safe route avoiding risk zones
+        function findSafeRoute() {
+            const startInput = document.getElementById('startPoint').value;
+            const endInput = document.getElementById('endPoint').value;
+            const statusPanel = document.getElementById('routeStatus');
+            
+            if (!startInput || !endInput) {
+                statusPanel.innerHTML = '<strong>Route Status:</strong> ❌ Please enter both start and end points';
+                statusPanel.classList.add('alert');
+                return;
+            }
+
+            try {
+                const startCoords = parseCoordinates(startInput);
+                const endCoords = parseCoordinates(endInput);
+
+                // Clear existing route and markers
+                clearRoute();
+
+                // Add markers for start and end points
+                addMarker(startCoords, '<strong>Start Point</strong>');
+                addMarker(endCoords, '<strong>End Point</strong>');
+
+                // Create route
+                routingControl = L.Routing.control({
+                    waypoints: [
+                        L.latLng(startCoords.lat, startCoords.lng),
+                        L.latLng(endCoords.lat, endCoords.lng)
+                    ],
+                    routeWhileDragging: false,
+                    showAlternatives: false,
+                    lineOptions: {
+                        styles: [
+                            {
+                                color: '#27ae60',
+                                opacity: 0.8,
+                                weight: 6
+                            }
+                        ]
+                    },
+                    createMarker: function() { return null; },
+                    router: L.Routing.osrmv1({
+                        serviceUrl: 'https://router.project-osrm.org/route/v1'
+                    })
+                }).addTo(map);
+
+                // Apply dark mode styling to routing panel if needed
+                if (document.body.classList.contains('dark-mode')) {
+                    updateRoutingPanelTheme('dark');
+                }
+
+                routingControl.on('routesfound', function(e) {
+                    const routes = e.routes;
+                    const route = routes[0];
+                    
+                    // Check route safety against ALL zones
+                    const safetyCheck = checkRouteSafety(route);
+                    
+                    if (safetyCheck.safe) {
+                        statusPanel.innerHTML = `<strong>Route Status:</strong> ✅ Safe route found (${(route.summary.totalDistance / 1000).toFixed(1)} km, ${Math.round(route.summary.totalTime / 60)} min)`;
+                        statusPanel.classList.remove('alert');
+                    } else {
+                        let warningMessage = `<strong>Route Status:</strong> ⚠️ Route passes through:`;
+                        if (safetyCheck.highRiskZones.length > 0) {
+                            warningMessage += `<br>🚨 ${safetyCheck.highRiskZones.length} HIGH RISK zone(s) - AVOID!`;
+                        }
+                        if (safetyCheck.floodZones.length > 0) {
+                            warningMessage += `<br>🌊 ${safetyCheck.floodZones.length} FLOOD zone(s)`;
+                        }
+                        if (safetyCheck.landslideZones.length > 0) {
+                            warningMessage += `<br>⛰️ ${safetyCheck.landslideZones.length} LANDSLIDE zone(s)`;
+                        }
+                        warningMessage += `<br><strong>Recommendation:</strong> Consider alternative routes or delay travel`;
+                        
+                        statusPanel.innerHTML = warningMessage;
+                        statusPanel.classList.add('alert');
+                    }
+                });
+
+                routingControl.on('routingerror', function(e) {
+                    statusPanel.innerHTML = '<strong>Route Status:</strong> ❌ Could not calculate route. Please check coordinates.';
+                    statusPanel.classList.add('alert');
+                });
+
+                statusPanel.innerHTML = '<strong>Route Status:</strong> 🔄 Calculating route...';
+                statusPanel.classList.remove('alert');
+
+            } catch (error) {
+                statusPanel.innerHTML = '<strong>Route Status:</strong> ❌ Invalid coordinates format. Use: lat,lng';
+                statusPanel.classList.add('alert');
+            }
+        }
+
+        // Parse coordinate input
+        function parseCoordinates(input) {
+            const coords = input.split(',').map(coord => parseFloat(coord.trim()));
+            if (coords.length !== 2 || coords.some(isNaN)) {
+                throw new Error('Invalid coordinates');
+            }
+            return { lat: coords[0], lng: coords[1] };
+        }
+
+        // IMPROVED: Check if route passes through risk zones
+        function checkRouteSafety(route) {
+            const floodZones = [];
+            const landslideZones = [];
+            const highRiskZonesFound = [];
+            
+            const allZones = [...floodRiskZones, ...landslideRiskZones, ...highRiskZones];
+            
+            // Sample multiple points along the route for better detection
+            const samplePoints = [];
+            const totalPoints = 50; // Increased sampling for better accuracy
+            
+            for (let i = 0; i < totalPoints; i++) {
+                const fraction = i / (totalPoints - 1);
+                const index = Math.floor(fraction * (route.coordinates.length - 1));
+                samplePoints.push(route.coordinates[index]);
+            }
+            
+            // Check each sample point against all risk zones
+            samplePoints.forEach(coord => {
+                allZones.forEach(zone => {
+                    if (isPointInPolygon([coord.lat, coord.lng], zone.coordinates)) {
+                        if (zone.type === 'flood' && !floodZones.includes(zone.name)) {
+                            floodZones.push(zone.name);
+                        }
+                        if (zone.type === 'landslide' && !landslideZones.includes(zone.name)) {
+                            landslideZones.push(zone.name);
+                        }
+                        if (zone.type === 'high-risk' && !highRiskZonesFound.includes(zone.name)) {
+                            highRiskZonesFound.push(zone.name);
+                        }
+                    }
+                });
+            });
+
+            console.log('Route Safety Check:', {
+                floodZones,
+                landslideZones,
+                highRiskZonesFound,
+                totalSamplePoints: samplePoints.length
+            });
+
+            return {
+                safe: floodZones.length === 0 && landslideZones.length === 0 && highRiskZonesFound.length === 0,
+                floodZones: floodZones,
+                landslideZones: landslideZones,
+                highRiskZones: highRiskZonesFound
+            };
+        }
+
+        // IMPROVED: Better point-in-polygon check
+        function isPointInPolygon(point, polygon) {
+            const x = point[0], y = point[1];
+            let inside = false;
+            
+            for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+                const xi = polygon[i][0], yi = polygon[i][1];
+                const xj = polygon[j][0], yj = polygon[j][1];
+                
+                const intersect = ((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+                if (intersect) inside = !inside;
+            }
+            
+            return inside;
+        }
+
+        // Clear current route and markers
+        function clearRoute() {
+            if (routingControl) {
+                map.removeControl(routingControl);
+                routingControl = null;
+            }
+            
+            // Clear markers
+            currentMarkers.forEach(marker => map.removeLayer(marker));
+            currentMarkers = [];
+            
+            document.getElementById('routeStatus').innerHTML = '<strong>Route Status:</strong> Ready to calculate route';
+            document.getElementById('routeStatus').classList.remove('alert');
+        }
+    </script>
+</body>
+</html>

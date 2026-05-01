@@ -1,0 +1,37 @@
+# Environment variables (sensitive credentials)
+.env
+.env.local
+.env.*.local
+
+# Node dependencies
+node_modules/
+package-lock.json
+
+# Python environments
+.venv/
+venv/
+env/
+__pycache__/
+*.pyc
+*.pyo
+
+# Sensitive data / Logs
+sensor_log.csv
+*.log
+debug_log.txt
+
+# Models and large files
+disaster_model.pkl
+*.pkl
+*.model
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,1098 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <title>Weather and Disaster Monitoring Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Sora:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-0: #0a0e27;
+            --bg-1: #0f172a;
+            --bg-2: #1a1f3c;
+            --panel-a: rgba(30, 41, 59, 0.9);
+            --panel-b: rgba(22, 32, 51, 0.95);
+            --text-main: #ffffff;
+            --text-muted: #94a3b8;
+            --line: rgba(0, 212, 255, 0.3);
+            --cyan: #00d4ff;
+            --purple: #8b5cf6;
+            --pink: #ec4899;
+            --orange: #f97316;
+            --safe: #22c55e;
+            --warning: #f59e0b;
+            --critical: #ef4444;
+            --radius-lg: clamp(8px, 1vw, 16px);
+            --radius-md: clamp(8px, 0.8vw, 14px);
+            --space-1: clamp(0.5rem, 1vw, 0.75rem);
+            --space-2: clamp(1rem, 1.5vw, 1.5rem);
+            --space-3: clamp(1.5rem, 2vw, 2rem);
+            --shadow-main: 0 clamp(4px, 1vw, 8px) clamp(16px, 2vw, 32px) rgba(0, 0, 0, 0.4);
+            --ring: 0 0 0 2px var(--cyan), 0 0 20px rgba(0, 212, 255, 0.3);
+        }
+
+        body.light-mode {
+            --bg-0: #fafafa;
+            --bg-1: #f7f7f8;
+            --bg-2: #f4f4f5;
+            --panel-a: #ffffff;
+            --panel-b: #f4f4f5;
+            --text-main: #18181b;
+            --text-muted: #71717a;
+            --line: #e4e4e7;
+            --cyan: #06b6d4;
+            --purple: #a855f7;
+            --pink: #db2777;
+            --orange: #f97316;
+            --shadow-main: 0 10px 24px rgba(24, 24, 27, 0.08);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html {
+            scroll-behavior: smooth;
+            font-size: clamp(14px, 1vw + 0.5rem, 18px);
+        }
+
+        body {
+            min-height: 100vh;
+            font-family: "Sora", "Segoe UI", Tahoma, sans-serif;
+            font-size: max(16px, clamp(14px, 1vw + 0.5rem, 18px));
+            color: var(--text-main);
+            background:
+                radial-gradient(circle at 10% 8%, rgba(0, 212, 255, 0.2), transparent 35%),
+                radial-gradient(circle at 85% 20%, rgba(236, 72, 153, 0.16), transparent 35%),
+                radial-gradient(circle at 80% 85%, rgba(139, 92, 246, 0.18), transparent 40%),
+                linear-gradient(130deg, var(--bg-0) 0%, var(--bg-1) 40%, var(--bg-2) 100%);
+            background-size: 140% 140%;
+            animation: meshShift 16s ease-in-out infinite;
+            overflow-x: hidden;
+            transition: color 0.35s ease, background 0.45s ease;
+        }
+
+        @keyframes meshShift {
+            0% { background-position: 0% 20%; }
+            50% { background-position: 100% 80%; }
+            100% { background-position: 0% 20%; }
+        }
+
+        img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        svg {
+            width: 100%;
+            height: auto;
+        }
+
+        video {
+            max-width: 100%;
+            height: auto;
+            aspect-ratio: 16 / 9;
+        }
+
+        a,
+        button,
+        .btn,
+        .send-data-btn {
+            min-width: 48px;
+            min-height: 48px;
+        }
+
+        :focus-visible {
+            outline: none;
+            box-shadow: var(--ring);
+            border-radius: 10px;
+        }
+
+        .app-shell {
+            display: block;
+            width: 100%;
+            min-height: 100vh;
+        }
+
+        .surface,
+        .panel,
+        .sensor-card,
+        .water-card,
+        .ml-mini,
+        .quick-cell,
+        .axis-block,
+        .gas-card {
+            position: relative;
+            overflow: hidden;
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--line);
+            background: linear-gradient(145deg, var(--panel-a), var(--panel-b));
+            box-shadow: var(--shadow-main);
+            backdrop-filter: blur(clamp(8px, 1vw, 12px));
+            -webkit-backdrop-filter: blur(clamp(8px, 1vw, 12px));
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .surface::before,
+        .panel::before,
+        .sensor-card::before,
+        .water-card::before,
+        .ml-mini::before,
+        .quick-cell::before,
+        .axis-block::before,
+        .gas-card::before {
+            content: "";
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            pointer-events: none;
+        }
+
+        .surface::after,
+        .panel::after,
+        .sensor-card::after,
+        .water-card::after,
+        .ml-mini::after,
+        .quick-cell::after,
+        .axis-block::after,
+        .gas-card::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background:
+                linear-gradient(45deg, rgba(255, 255, 255, 0.08), transparent 38%),
+                linear-gradient(225deg, rgba(255, 255, 255, 0.06), transparent 42%);
+            pointer-events: none;
+            mix-blend-mode: screen;
+        }
+
+        @media (hover: hover) {
+            .panel:hover,
+            .sensor-card:hover,
+            .water-card:hover,
+            .ml-mini:hover,
+            .quick-cell:hover,
+            .axis-block:hover,
+            .gas-card:hover,
+            .btn:hover,
+            .send-data-btn:hover {
+                transform: scale(1.02) translateY(clamp(-2px, -0.5vw, -4px));
+                border-color: rgba(0, 212, 255, 0.85);
+                box-shadow:
+                    0 0 clamp(10px, 2vw, 20px) rgba(0, 212, 255, 0.4),
+                    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+                    var(--shadow-main);
+            }
+        }
+
+        @media (hover: none) {
+            .panel:active,
+            .sensor-card:active,
+            .water-card:active,
+            .ml-mini:active,
+            .quick-cell:active,
+            .axis-block:active,
+            .gas-card:active,
+            .btn:active,
+            .send-data-btn:active {
+                border-color: rgba(0, 212, 255, 0.85);
+                box-shadow: 0 0 16px rgba(0, 212, 255, 0.35);
+                transform: translateY(1px);
+            }
+        }
+
+        .main-content {
+            margin-left: 0;
+            width: 100%;
+            max-width: 100%;
+            overflow-x: clip;
+            padding: 0;
+        }
+
+        .dashboard {
+            max-width: 100%;
+            padding: clamp(1rem, 3vw, 3rem);
+            display: grid;
+            gap: var(--space-2);
+            position: relative;
+            z-index: 2;
+            overflow-x: clip;
+        }
+
+        .surface,
+        .panel {
+            padding: clamp(1rem, 2vw, 2rem);
+        }
+
+        .header {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: var(--space-2);
+        }
+
+        .title-wrap h1 {
+            font-family: "Chakra Petch", "Segoe UI", sans-serif;
+            font-size: clamp(1.4rem, 2vw + 0.8rem, 2.25rem);
+            background: linear-gradient(90deg, var(--cyan), var(--purple), var(--pink), var(--orange));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: 0.04em;
+        }
+
+        .title-wrap p,
+        .water-meta,
+        .quick-label,
+        .metric-sub,
+        .axis-head,
+        .gas-name,
+        .ml-mini-label,
+        .updated {
+            color: var(--text-muted);
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+            flex-wrap: wrap;
+        }
+
+        .top-nav {
+            display: flex;
+            align-items: center;
+            gap: 0.55rem;
+            flex-wrap: wrap;
+        }
+
+        .status-pill,
+        .clock-pill,
+        .btn,
+        .tag,
+        .state-badge {
+            border-radius: 999px;
+            border: 1px solid var(--line);
+            background: linear-gradient(140deg, rgba(0, 212, 255, 0.16), rgba(139, 92, 246, 0.16));
+            color: var(--text-main);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.45rem;
+            padding: 0.45rem 0.8rem;
+            font-weight: 700;
+            font-size: 0.78rem;
+            text-decoration: none;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--safe);
+            box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.6);
+            animation: pulseDot 1.4s infinite;
+        }
+
+        @keyframes pulseDot {
+            0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.6); }
+            100% { box-shadow: 0 0 0 12px rgba(34, 197, 94, 0); }
+        }
+
+        .alert-banner {
+            display: none;
+            border-radius: var(--radius-md);
+            border: 1px solid rgba(249, 115, 22, 0.6);
+            background: linear-gradient(125deg, rgba(236, 72, 153, 0.3), rgba(249, 115, 22, 0.3));
+            padding: 0.8rem 1rem;
+            font-weight: 700;
+        }
+
+        .alert-banner.show {
+            display: block;
+        }
+
+        .layout,
+        .sensor-grid,
+        .water-system,
+        .bottom-row,
+        .ml-panel-grid,
+        .quick-grid,
+        .mq2-grid,
+        .summary-stats,
+        .mpu-grid {
+            display: grid;
+            gap: var(--space-1);
+            grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+        }
+
+        .layout > .panel:nth-child(3) {
+            grid-column: 1 / -1;
+        }
+
+        .panel-title {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.8rem;
+            font-family: "Chakra Petch", "Segoe UI", sans-serif;
+        }
+
+        .metric-main,
+        .sensor-value,
+        .water-value,
+        .ml-risk,
+        .quick-value,
+        .gas-value,
+        .axis-line,
+        .tilt-state {
+            font-family: "Chakra Petch", "Segoe UI", sans-serif;
+        }
+
+        .metric-main {
+            font-size: clamp(2rem, 4vw, 3.1rem);
+            line-height: 1;
+        }
+
+        .sensor-card,
+        .water-card,
+        .quick-cell,
+        .ml-mini,
+        .axis-block,
+        .gas-card {
+            padding: 0.8rem;
+        }
+
+        .sensor-head,
+        .axis-line {
+            display: flex;
+            justify-content: space-between;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .sensor-status,
+        .status-disconnected {
+            border-radius: 999px;
+            font-size: 0.66rem;
+            padding: 0.25rem 0.5rem;
+            font-weight: 700;
+        }
+
+        .sensor-status {
+            color: #bbf7d0;
+            border: 1px solid rgba(34, 197, 94, 0.42);
+            background: rgba(34, 197, 94, 0.15);
+        }
+
+        .status-disconnected {
+            color: #fecaca;
+            border: 1px solid rgba(239, 68, 68, 0.5);
+            background: rgba(239, 68, 68, 0.2);
+        }
+
+        .mini-bar,
+        .risk-meter,
+        .summary-progress {
+            height: 10px;
+            border-radius: 999px;
+            background: rgba(148, 163, 184, 0.2);
+            overflow: hidden;
+            margin-top: 0.45rem;
+        }
+
+        .mini-fill,
+        .summary-progress > div,
+        .risk-meter > div {
+            height: 100%;
+            width: 0;
+            border-radius: inherit;
+            transition: width 0.35s ease;
+            background: linear-gradient(90deg, var(--cyan), var(--purple), var(--pink), var(--orange));
+        }
+
+        .tank {
+            width: 72px;
+            max-width: 100%;
+            height: 185px;
+            margin-inline: auto;
+            border-radius: 20px;
+            border: 1px solid rgba(0, 212, 255, 0.3);
+            background: rgba(15, 23, 42, 0.5);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .water-level-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 0.5rem;
+        }
+
+        .water-level-card .tank {
+            height: clamp(240px, 34vh, 320px);
+            width: clamp(74px, 8vw, 92px);
+        }
+
+        .water-level-card .water-value {
+            margin-top: 0.2rem;
+        }
+
+        .water-level-card .water-meta {
+            margin-top: 0;
+        }
+
+        .tank-fill {
+            position: absolute;
+            inset: auto 0 0 0;
+            height: 6%;
+            background: linear-gradient(180deg, var(--cyan), #0284c7);
+            transition: height 0.4s ease;
+        }
+
+        .roof-water-panel {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-1);
+            align-items: center;
+        }
+
+        .roof-metric-primary,
+        .roof-chart-wrapper,
+        .summary-strip,
+        .mq2-safe-note,
+        .ultrasonic-box {
+            width: 100%;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--line);
+            background: linear-gradient(145deg, rgba(59, 130, 246, 0.16), rgba(14, 165, 233, 0.16));
+            padding: 0.8rem;
+        }
+
+        #ultrasonicStatusText {
+            min-height: clamp(72px, 10vw, 96px);
+            line-height: 1.5;
+            font-size: clamp(0.86rem, 1vw + 0.35rem, 1rem);
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            white-space: normal;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+
+        .roof-water-value {
+            font-size: clamp(2rem, 6vw, 3.25rem);
+            line-height: 1;
+            color: var(--cyan);
+            font-weight: 800;
+        }
+
+        .roof-capacity-label {
+            color: #38bdf8;
+            font-size: 0.78rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            text-shadow: 0 0 10px rgba(56, 189, 248, 0.45);
+        }
+
+        .roof-water-container-wrapper {
+            width: 100%;
+            height: clamp(140px, 22vw, 190px);
+            border-radius: 12px;
+            border: 1px solid var(--line);
+            background: rgba(15, 23, 42, 0.52);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .roof-water-container {
+            position: absolute;
+            inset: auto 0 0 0;
+            height: 0;
+            background: linear-gradient(180deg, rgba(56, 189, 248, 0.92), rgba(37, 99, 235, 0.92));
+            transition: height 0.4s ease;
+        }
+
+        #ultrasonicWaterContainer {
+            background: linear-gradient(180deg, #7dd3fc 0%, #38bdf8 40%, #0ea5e9 75%, #0284c7 100%);
+            box-shadow: inset 0 2px 12px rgba(186, 230, 253, 0.35);
+            border-top: 1px solid rgba(224, 242, 254, 0.7);
+        }
+
+        .roof-water-text {
+            position: absolute;
+            left: 0.65rem;
+            bottom: 0.65rem;
+            color: #dbeafe;
+            font-size: 0.8rem;
+            font-weight: 700;
+        }
+
+        #ultrasonicChart {
+            width: 100% !important;
+            height: clamp(140px, 20vw, 190px) !important;
+        }
+
+        #mpuChartWrap {
+            height: clamp(150px, 22vw, 210px);
+        }
+
+        .mpu-alert {
+            display: none;
+            margin-top: 0.55rem;
+            margin-bottom: 0.65rem;
+            padding: 0.62rem 0.78rem;
+            border-radius: 10px;
+            border: 1px solid rgba(239, 68, 68, 0.55);
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(249, 115, 22, 0.22));
+            color: #fee2e2;
+            font-size: 0.82rem;
+            font-weight: 700;
+            letter-spacing: 0.01em;
+            line-height: 1.4;
+        }
+
+        .mpu-alert.show {
+            display: block;
+        }
+
+        .tilt-zone {
+            border-color: rgba(249, 115, 22, 0.54);
+            background: linear-gradient(140deg, rgba(127, 29, 29, 0.35), rgba(249, 115, 22, 0.2));
+        }
+
+        .tilt-circle {
+            width: clamp(92px, 16vw, 128px);
+            height: clamp(92px, 16vw, 128px);
+            border-radius: 50%;
+            margin: 0.6rem auto;
+            display: grid;
+            place-items: center;
+            border: 2px solid rgba(255, 255, 255, 0.4);
+            background: radial-gradient(circle at 35% 25%, rgba(236, 72, 153, 0.72), rgba(249, 115, 22, 0.72));
+        }
+
+        .tilt-icon {
+            font-size: clamp(1.5rem, 2.2vw, 2.1rem);
+        }
+
+        .ml-panel {
+            display: grid;
+            gap: var(--space-1);
+            grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+        }
+
+        .ml-score {
+            border-radius: var(--radius-md);
+            border: 1px solid var(--line);
+            padding: 1rem;
+            background: linear-gradient(150deg, rgba(14, 165, 233, 0.16), rgba(139, 92, 246, 0.12));
+        }
+
+        .ml-alerts {
+            display: grid;
+            gap: 0.45rem;
+            margin-top: 0.8rem;
+        }
+
+        .ml-alert-item {
+            border-radius: 10px;
+            border: 1px solid rgba(249, 115, 22, 0.4);
+            background: rgba(249, 115, 22, 0.12);
+            color: #ffedd5;
+            padding: 0.6rem 0.7rem;
+            font-size: 0.82rem;
+            font-weight: 600;
+        }
+
+        body.light-mode .ml-alert-item {
+            color: #7c2d12;
+            background: rgba(249, 115, 22, 0.18);
+        }
+
+        .send-data-btn {
+            width: 100%;
+            border-radius: 12px;
+            border: 1px solid rgba(0, 212, 255, 0.6);
+            background: linear-gradient(135deg, rgba(0, 212, 255, 0.22), rgba(139, 92, 246, 0.22));
+            color: var(--text-main);
+            font-weight: 700;
+            letter-spacing: 0.03em;
+            cursor: pointer;
+        }
+
+        .send-status {
+            margin-top: 0.7rem;
+            border-radius: 10px;
+            padding: 0.55rem 0.7rem;
+            font-size: 0.82rem;
+            display: none;
+        }
+
+        .send-status.success {
+            display: block;
+            background: rgba(34, 197, 94, 0.16);
+            border: 1px solid rgba(34, 197, 94, 0.4);
+            color: #dcfce7;
+        }
+
+        .send-status.error {
+            display: block;
+            background: rgba(239, 68, 68, 0.16);
+            border: 1px solid rgba(239, 68, 68, 0.45);
+            color: #fee2e2;
+        }
+
+        .footer-bar {
+            display: flex;
+            gap: var(--space-1);
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+        }
+
+        .log-stream {
+            color: #c7d2fe;
+            font-weight: 600;
+        }
+
+        @media (max-width: 1024px) {
+            .main-content {
+                margin-left: 0;
+                width: 100%;
+                max-width: 100%;
+            }
+        }
+
+        /* Mobile: 0-576 */
+        @media (max-width: 576px) {
+            .layout,
+            .bottom-row,
+            .sensor-grid,
+            .water-system,
+            .mq2-grid,
+            .summary-stats,
+            .quick-grid,
+            .mpu-grid,
+            .ml-panel,
+            .ml-panel-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Tablet: 577-1024 */
+        @media (min-width: 577px) and (max-width: 1024px) {
+            .layout,
+            .bottom-row {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        /* Laptop: 1025-1440 */
+        @media (min-width: 1025px) and (max-width: 1440px) {
+            .layout {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .layout > .panel:nth-child(3) {
+                grid-column: 1 / -1;
+            }
+
+            .sensor-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .bottom-row {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+        }
+
+        /* Desktop: 1441-1920 */
+        @media (min-width: 1441px) and (max-width: 1920px) {
+            .layout,
+            .bottom-row {
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+            }
+        }
+
+        /* Ultra-wide: 1921+ */
+        @media (min-width: 1921px) {
+            .dashboard {
+                max-width: min(2200px, 92vw);
+                margin-inline: auto;
+                padding: clamp(2rem, 2.8vw, 4rem);
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation: none !important;
+                transition: none !important;
+                scroll-behavior: auto !important;
+            }
+        }
+
+        @media print {
+            body {
+                background: #ffffff !important;
+                color: #000000 !important;
+                font-size: 12pt;
+            }
+
+            .status-dot,
+            .alert-banner,
+            .log-stream {
+                display: none !important;
+            }
+
+            .main-content,
+            .dashboard {
+                margin: 0 !important;
+                padding: 0 !important;
+                max-width: 100% !important;
+            }
+
+            .panel,
+            .surface,
+            .sensor-card,
+            .water-card {
+                box-shadow: none !important;
+                border: 1px solid #777 !important;
+                background: #fff !important;
+                color: #000 !important;
+            }
+
+            .panel::before,
+            .panel::after,
+            .surface::before,
+            .surface::after {
+                display: none !important;
+            }
+        }
+    </style>
+</head>
+<body class="dark-mode">
+    <div class="main-content">
+    <div class="dashboard">
+        <header class="header surface">
+            <div class="title-wrap">
+                <h1>Weather and Disaster Monitoring Prototype</h1>
+                <p>Real-time IoT command view with emergency visualization</p>
+            </div>
+            <div class="header-actions">
+                <div class="top-nav">
+                    <a class="btn" href="#">Overview</a>
+                    <a class="btn" href="#">Analytics</a>
+                    <a class="btn" href="#">Safety</a>
+                </div>
+                <div class="status-pill"><span class="status-dot"></span>System Active</div>
+                <div class="clock-pill">Live <span id="liveClock">--:--:--</span></div>
+                <a class="btn" href="/flood-map">Flood Map</a>
+                <button class="btn" id="themeToggle" type="button">Toggle Theme</button>
+            </div>
+        </header>
+
+        <div class="alert-banner show" id="alertBanner">CRITICAL: Tilt sensor indicates TILTED state. Immediate inspection required.</div>
+
+        <main class="layout">
+            <section class="panel">
+                <div class="panel-title">
+                    <h2>Weather Conditions</h2>
+                    <span class="tag" id="dht11Status">CONNECTED</span>
+                </div>
+
+                <div class="hero-weather">
+                    <div class="metric-hero">
+                        <div>
+                            <div class="metric-main"><span id="tempValue">30.1</span>°C</div>
+                            <div class="metric-sub">Ambient Temperature</div>
+                        </div>
+                    </div>
+
+                    <div class="quick-grid">
+                        <div class="quick-cell">
+                            <div class="quick-label">Humidity</div>
+                            <div class="quick-value"><span id="humidityValue">77.0</span>%</div>
+                        </div>
+                        <div class="quick-cell">
+                            <div class="quick-label">Pressure</div>
+                            <div class="quick-value"><span id="pressureValue">1013.9</span> hPa</div>
+                        </div>
+                        <div class="quick-cell">
+                            <div class="quick-label">Altitude</div>
+                            <div class="quick-value"><span id="altitudeValue">32.0</span> m</div>
+                        </div>
+                        <div class="quick-cell">
+                            <div class="quick-label">BMP180 Temp</div>
+                            <div class="quick-value"><span id="bmpTempValue">30.3</span>°C</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="panel">
+                <div class="panel-title">
+                    <h2>Sensor Grid</h2>
+                    <span class="tag">2 x 3</span>
+                </div>
+
+                <div class="sensor-grid">
+                    <article class="sensor-card">
+                        <div class="sensor-head">
+                            <div class="sensor-name">Temperature (DHT11)</div>
+                            <div class="sensor-status" id="dht11TempStatus">CONNECTED</div>
+                        </div>
+                        <div class="sensor-value"><span id="tempValueMirror">30.1</span><span class="sensor-unit">°C</span></div>
+                        <div class="mini-bar"><div class="mini-fill" id="tempBar"></div></div>
+                    </article>
+
+                    <article class="sensor-card">
+                        <div class="sensor-head">
+                            <div class="sensor-name">Humidity (DHT11)</div>
+                            <div class="sensor-status" id="dht11HumidityStatus">CONNECTED</div>
+                        </div>
+                        <div class="sensor-value"><span id="humidityValueMirror">77.0</span><span class="sensor-unit">%</span></div>
+                        <div class="mini-bar"><div class="mini-fill" id="humidityBar"></div></div>
+                    </article>
+
+                    <article class="sensor-card">
+                        <div class="sensor-head">
+                            <div class="sensor-name">Rainfall</div>
+                            <div class="sensor-status" id="rainStatus">CONNECTED</div>
+                        </div>
+                        <div class="sensor-value"><span id="rainValue">0</span><span class="sensor-unit">%</span></div>
+                        <div class="mini-bar"><div class="mini-fill" id="rainBar"></div></div>
+                    </article>
+
+                    <article class="sensor-card">
+                        <div class="sensor-head">
+                            <div class="sensor-name">Soil Moisture</div>
+                            <div class="sensor-status" id="soilStatus">CONNECTED</div>
+                        </div>
+                        <div class="sensor-value"><span id="soilValue">0</span><span class="sensor-unit">%</span></div>
+                        <div class="mini-bar"><div class="mini-fill" id="soilBar"></div></div>
+                    </article>
+
+                    <article class="sensor-card">
+                        <div class="sensor-head">
+                            <div class="sensor-name">Temperature (BMP180)</div>
+                            <div class="sensor-status" id="bmpTempStatus">CONNECTED</div>
+                        </div>
+                        <div class="sensor-value"><span id="bmpTempValueMirror">30.3</span><span class="sensor-unit">°C</span></div>
+                        <div class="mini-bar"><div class="mini-fill" id="bmpTempBar"></div></div>
+                    </article>
+
+                    <article class="sensor-card">
+                        <div class="sensor-head">
+                            <div class="sensor-name">Pressure</div>
+                            <div class="sensor-status" id="bmpPressureStatus">CONNECTED</div>
+                        </div>
+                        <div class="sensor-value"><span id="pressureValueMirror">1013.9</span><span class="sensor-unit">hPa</span></div>
+                        <div class="mini-bar"><div class="mini-fill" id="pressureBar"></div></div>
+                    </article>
+                </div>
+            </section>
+
+            <section class="panel">
+                <div class="panel-title">
+                    <h2>🏠 Roof Monitoring & Water System</h2>
+                    <span class="tag" id="waterLevelStatus">ACTIVE</span>
+                </div>
+
+                <div class="water-system">
+                    <article class="water-card water-level-card">
+                        <div class="water-title">Water Level Sensor</div>
+                        <div class="tank">
+                            <div class="tank-fill" id="waterLevelVerticalBar"></div>
+                        </div>
+                        <div class="water-value"><span id="waterLevelSensorValue">6.0</span>%</div>
+                        <div class="water-meta">Raw: <span id="waterLevelRawValue">507</span></div>
+                        <div class="state-badge" id="waterLevelSensorStatus">NO WATER</div>
+                    </article>
+
+                    <article class="water-card roof-water-panel" id="ultrasonicSection">
+                        <div class="water-title">🏠 Roof Water Accumulation (Ultrasonic)</div>
+                        
+                        <!-- Primary Metric: Large Water Level Display -->
+                        <div class="roof-metric-primary">
+                            <div class="roof-water-value"><span id="ultrasonicValue">0</span></div>
+                            <div class="roof-water-unit">cm</div>
+                            <div class="roof-water-percent" id="ultrasonicPercentText">0% Filled</div>
+                        </div>
+
+                        <!-- Status and Description -->
+                        <div class="roof-status-section">
+                            <div class="ultrasonic-box" id="ultrasonicStatusText">Waiting for rain detection...</div>
+                            <div class="state-badge" id="ultrasonicSensorStatus">STANDBY</div>
+                        </div>
+
+                        <!-- Real-time Water Visualization -->
+                        <div class="roof-water-visual">
+                            <div class="roof-capacity-label">ROOF CAPACITY</div>
+                            <div class="roof-water-container-wrapper">
+                                <div id="ultrasonicWaterContainer" class="roof-water-container"></div>
+                                <div class="roof-water-text" id="ultrasonicWaterText">0 cm</div>
+                            </div>
+                        </div>
+
+                        <!-- Trend Chart -->
+                        <div class="roof-chart-wrapper">
+                            <canvas id="ultrasonicChart"></canvas>
+                        </div>
+                    </article>
+                </div>
+
+                <div class="summary-strip">
+                    <div class="summary-progress">
+                        <div id="waterSummaryProgress"></div>
+                    </div>
+                    <div class="summary-stats">
+                        <div>Roof Water: <strong id="readingWaterHeight">0cm</strong></div>
+                        <div>Capacity: <strong id="readingStatus">CLEAR</strong></div>
+                    </div>
+                    <div id="waterLevelComparisonText" class="water-meta">Roof monitoring system ready - awaiting rainfall data.</div>
+                </div>
+            </section>
+        </main>
+
+        <section class="bottom-row">
+            <article class="panel tilt-zone">
+                <div class="panel-title">
+                    <h2>Altitude and Tilt</h2>
+                    <span class="tag" id="tiltStatus">CONNECTED</span>
+                </div>
+                <div class="quick-cell" style="margin-bottom:10px;">
+                    <div class="quick-label">Altitude</div>
+                    <div class="quick-value"><span id="altitudeValueMirror">32.0</span> meters</div>
+                    <div class="mini-bar"><div class="mini-fill" id="altitudeBar"></div></div>
+                </div>
+                <div class="tilt-circle" id="tiltIndicator"><span class="tilt-icon" id="tiltIcon">⚠️</span></div>
+                <div class="tilt-state" id="tiltValue">TILTED</div>
+                <div class="water-meta" style="text-align:center;color:#fecdd3;">High priority alert: orientation instability detected</div>
+            </article>
+
+            <article class="panel">
+                <div class="panel-title">
+                    <h2>Air Quality (MQ-2)</h2>
+                    <span class="tag" id="mq2Status">CONNECTED</span>
+                </div>
+                <div class="mq2-grid">
+                    <div class="gas-card"><div class="gas-name">LPG</div><div class="gas-value"><span id="lpgValue">0</span> ppm</div></div>
+                    <div class="gas-card"><div class="gas-name">Propane</div><div class="gas-value"><span id="propaneValue">0</span> ppm</div></div>
+                    <div class="gas-card"><div class="gas-name">Methane</div><div class="gas-value"><span id="methaneValue">0</span> ppm</div></div>
+                    <div class="gas-card"><div class="gas-name">Hydrogen</div><div class="gas-value"><span id="hydrogenValue">0</span> ppm</div></div>
+                    <div class="gas-card"><div class="gas-name">Smoke</div><div class="gas-value"><span id="smokeValue">0</span> ppm</div></div>
+                    <div class="gas-card"><div class="gas-name">Safety</div><div class="gas-value">SAFE</div></div>
+                </div>
+                <div class="mq2-safe-note">No hazardous gas concentration detected. All channels remain in safe mode.</div>
+            </article>
+
+            <article class="panel">
+                <div class="panel-title">
+                    <h2>MPU6050: Acceleration and Gyroscope</h2>
+                    <span class="tag" id="mpu6050Status">CONNECTED</span>
+                </div>
+                <div class="mpu-alert" id="mpuEarthquakeAlert">🚨 EARTHQUAKE ALERT: Strong shaking detected from MPU6050.</div>
+                <div id="mpuChartWrap">
+                    <canvas id="mpuChart"></canvas>
+                </div>
+                <div class="mpu-grid">
+                    <div class="axis-block">
+                        <div class="axis-head">Acceleration</div>
+                        <div class="axis-line"><span>X</span><span id="accelX">-776</span></div>
+                        <div class="axis-line"><span>Y</span><span id="accelY">192</span></div>
+                        <div class="axis-line"><span>Z</span><span id="accelZ">15320</span></div>
+                    </div>
+                    <div class="axis-block">
+                        <div class="axis-head">Gyroscope</div>
+                        <div class="axis-line"><span>X</span><span id="gyroX">-27</span></div>
+                        <div class="axis-line"><span>Y</span><span id="gyroY">-366</span></div>
+                        <div class="axis-line"><span>Z</span><span id="gyroZ">-68</span></div>
+                    </div>
+                </div>
+            </article>
+        </section>
+
+        <section class="panel ml-panel">
+            <div class="ml-score">
+                <div class="panel-title" style="margin-bottom:6px;">
+                    <h2>Quick Actions</h2>
+                </div>
+                <button id="sendDataBtn" class="send-data-btn" title="Send all sensor data to Telegram">
+                    📤 Send Data to Telegram
+                </button>
+                <div class="send-status" id="sendStatus"></div>
+            </div>
+        </section>
+
+        <!-- RAG Chat Assistant -->
+        <section class="panel" id="ragPanel" style="display:block;">
+            <div class="panel-title">
+                <h2>Disaster Assistant</h2>
+                <span class="tag">Chatbot</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:0.6rem;">
+                <div id="ragOutput" class="surface" style="min-height:120px; padding:0.8rem; overflow:auto; white-space:pre-wrap;"></div>
+                <div style="display:flex;gap:0.5rem;align-items:center;">
+                    <input id="ragInput" type="text" placeholder="Ask about floods, evacuation, safety..." style="flex:1;padding:0.6rem;border-radius:8px;border:1px solid var(--line);background:rgba(0,0,0,0.04);color:var(--text-main);">
+                    <button id="ragSend" class="btn" type="button">Ask</button>
+                </div>
+                <div style="font-size:0.85rem;color:var(--text-muted);">Tip: Press Enter to send. Responses cite knowledge base chunks.</div>
+            </div>
+        </section>
+
+        <section class="panel ml-panel">
+            <div class="ml-score">
+                <div class="panel-title" style="margin-bottom:6px;">
+                    <h2>ML Prediction</h2>
+                    <span class="tag" id="mlStatus">CHECKING</span>
+                </div>
+                <div class="ml-risk" id="mlRiskLevel">SAFE</div>
+                <div class="risk-meter"><div id="mlRiskBar"></div></div>
+                <div class="ml-risk-sub" id="mlRiskSummary">Waiting for predictor output...</div>
+                <div class="ml-alerts" id="mlAlerts"></div>
+            </div>
+
+            <div class="ml-panel-grid">
+                <div class="ml-mini">
+                    <div class="ml-mini-label">Mode</div>
+                    <div class="ml-mini-value" id="mlModeValue">-</div>
+                </div>
+                <div class="ml-mini">
+                    <div class="ml-mini-label">Label</div>
+                    <div class="ml-mini-value" id="mlLabelValue">1</div>
+                </div>
+                <div class="ml-mini">
+                    <div class="ml-mini-label">Decision</div>
+                    <div class="ml-mini-value" id="mlDecisionScore">0.00</div>
+                </div>
+            </div>
+        </section>
+
+        <footer class="footer-bar surface">
+            <div class="log-stream">System Logs: Sensor links stable. Water module in standby. Tilt alert active.</div>
+            <div class="updated" id="lastUpdate">Last updated: --</div>
+        </footer>
+    </div>
+    </div>
+    <script src="./rag_engine.js"></script>
+    <script src="dashboard.js"></script>
+</body>
+</html>

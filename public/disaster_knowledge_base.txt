@@ -1,0 +1,147 @@
+# DISASTER SAFETY KNOWLEDGE BASE
+# Format: Each chunk starts with [ID | TOPIC | SEVERITY]
+# Severity: HIGH / MODERATE / LOW
+# Topics: flood, earthquake, heat, wind, landslide, gas
+# Add new chunks by following the same format.
+# The RAG engine splits on "---" between chunks.
+
+
+---
+[flood-001 | flood | HIGH]
+Flash floods can rise within minutes. The moment you see rising water, move immediately to higher ground. Do not wait for official warnings. Never attempt to walk through moving water more than 6 inches (15 cm) deep — the current can knock an adult off their feet.
+---
+[flood-002 | flood | HIGH]
+Never drive through flooded roads. Just 12 inches of rushing water can carry away a small vehicle. 2 feet of water can sweep away most cars and SUVs. Rule: Turn around, don't drown. Most flood deaths occur in vehicles.
+---
+[flood-003 | flood | HIGH]
+If trapped in a building during a flood, go to the highest floor. Do not enter the attic unless you have a tool to break through the roof, as you may become trapped. Signal for rescue from a window using a flashlight or bright cloth.
+---
+[flood-004 | flood | MODERATE]
+After a flood, avoid floodwater — it is likely contaminated with sewage, chemicals, and pathogens. Wear rubber boots and gloves. Wash hands thoroughly. Do not use tap water until authorities confirm it is safe. Boil water if uncertain.
+---
+[flood-005 | flood | LOW]
+Flood emergency kit: waterproof bag with ID documents, 3-day water supply (1 gallon/person/day), non-perishable food, first aid kit, flashlight, battery-powered or hand-crank radio, phone charger/power bank, whistle, dust mask.
+---
+[earthquake-001 | earthquake | HIGH]
+During an earthquake: DROP to hands and knees, COVER your head and neck under a sturdy table or against an interior wall away from windows, HOLD ON until shaking stops. This Drop-Cover-Hold On method is validated by seismic safety research worldwide.
+---
+[earthquake-002 | earthquake | HIGH]
+Do NOT run outside during shaking. Most earthquake injuries occur when people are hit by falling debris while running. Stay away from windows, exterior walls, bookcases, TVs, and light fixtures that can topple.
+---
+[earthquake-003 | earthquake | HIGH]
+After an earthquake, expect aftershocks. Check for injuries before moving. Do not use elevators. If you smell gas, open windows, leave immediately without switching anything on/off, and call the gas company from outside.
+---
+[earthquake-004 | earthquake | HIGH]
+Tsunami warning after coastal earthquake: if shaking lasted 20 or more seconds near the coast, move inland to high ground immediately. Do not wait for an official siren — natural ground shaking near the coast IS the warning.
+---
+[earthquake-005 | earthquake | MODERATE]
+Post-earthquake building safety: look for cracks in foundations, leaning walls, broken utility lines. Do not re-enter damaged buildings. Wear sturdy closed-toe shoes to protect from broken glass and debris scattered on the floor.
+---
+[heat-001 | heat | HIGH]
+Heat stroke is life-threatening. Signs: body temperature above 40°C (104°F), confusion, hot dry skin, rapid strong pulse, possible loss of consciousness. Call emergency services immediately. Cool the victim fast: move to shade, apply ice packs to armpits, groin, and neck where major blood vessels are near the skin.
+---
+[heat-002 | heat | HIGH]
+During extreme heat above 38°C (100°F), stay indoors between 10am and 4pm. Drink water every 15-20 minutes even if not thirsty. Avoid alcohol, caffeine, and heavy meals — all increase core body heat and accelerate dehydration.
+---
+[heat-003 | heat | MODERATE]
+Heat exhaustion signs: heavy sweating, cool/pale/clammy skin, fast weak pulse, nausea, muscle cramps, weakness, dizziness. Move to cool place, loosen clothing, apply cool wet cloths to skin, sip water slowly. If symptoms worsen or last over 1 hour, seek medical attention immediately.
+---
+[heat-004 | heat | MODERATE]
+Vulnerable groups in heat events: elderly (reduced thirst sensation), infants (cannot regulate temperature), people with heart or kidney disease, outdoor workers, and athletes. Check on them regularly every 1-2 hours. Never leave children or pets in parked vehicles — car interiors can reach 70°C in minutes.
+---
+[heat-005 | heat | LOW]
+If no air conditioning available: close blinds and curtains during daytime, open windows at night when cooler, use wet towels or misting fans, take cool (not cold) showers, visit public cooling centers (malls, libraries), wear lightweight loose-fitting light-colored clothing.
+---
+[wind-001 | wind | HIGH]
+High wind safety indoors: stay away from windows and exterior doors, move to an interior room on the lowest floor of a sturdy building, get under a staircase or sturdy table. Flying debris causes the majority of wind-related deaths and injuries.
+---
+[wind-002 | wind | HIGH]
+During a hurricane with sustained winds above 119 km/h (74 mph), do not go outside even if it appears calm. The eye of the storm creates a false calm. Dangerous conditions return when the other eyewall arrives — often with even stronger winds.
+---
+[wind-003 | wind | HIGH]
+If caught outdoors in high winds: avoid trees (falling branches are fatal), utility lines, and any tall or unstable structures. Lie flat in a low-lying area away from flood risk. Abandon large items like umbrellas and signs that become deadly projectiles.
+---
+[wind-004 | wind | HIGH]
+Tornado specific safety: if no basement, go to ground floor interior room — bathroom, closet, or interior hallway. Cover yourself with mattress or heavy blankets. Never shelter under a bridge or overpass — wind speed actually increases in those gaps and offers no protection.
+---
+[wind-005 | wind | LOW]
+Before wind events, prepare: trim dead tree branches near your home, secure or bring in outdoor furniture, reinforce garage doors (weakest structural point in most homes), charge all devices, fill car with fuel, prepare 72-hour emergency kit.
+---
+[landslide-001 | landslide | HIGH]
+Primary landslide warning signs: new cracks in ground, walls, or pavement; doors and windows that suddenly stick or jam; ground bulging at base of slopes; unusual sounds including cracking trees or deep rumbling; streams suddenly going muddy or drying up. Evacuate immediately if you observe these.
+---
+[landslide-002 | landslide | HIGH]
+During a landslide: if escape is impossible, curl into a tight ball and protect your head with both arms. Move away from the slide path by going upslope or sideways — never run downhill in the same direction as the slide. Debris avalanches can travel up to 320 km/h.
+---
+[landslide-003 | landslide | MODERATE]
+After a landslide, stay away from the slide area — secondary slides are very common within hours. Watch for flooding which often follows slides. Avoid downed power lines and damaged roads. Report hazardous conditions to local authorities immediately.
+---
+[landslide-004 | landslide | MODERATE]
+Landslides are most likely during and after heavy rain, during snowmelt, after wildfires (slopes destabilized by burning), during or after earthquakes, on slopes steeper than 25 degrees, and in areas with previous slide history. In Sri Lanka: central highlands, Sabaragamuwa, Uva provinces are highest risk.
+---
+[landslide-005 | landslide | LOW]
+Landslide evacuation: when authorities issue warnings, leave immediately — do not take time to pack extensively. Bring your emergency kit and go to designated shelter on high stable ground. Inform neighbors, especially elderly residents, who may not have received official warnings.
+---
+[gas-001 | gas | HIGH]
+Signs of toxic or poison gas: unusual smell (rotten eggs = hydrogen sulfide, bleach/pool smell = chlorine, sharp pungent = ammonia). Important: carbon monoxide is completely odorless. Warning signs regardless of smell: eye/nose/throat burning, sudden dizziness, difficulty breathing, or people or animals collapsing nearby.
+---
+[gas-002 | gas | HIGH]
+Carbon monoxide (CO) poisoning: symptoms are headache, dizziness, confusion, nausea — often mistaken for flu but with no fever. Install CO detectors on every floor of your home. If alarm sounds: evacuate everyone immediately, leave doors open as you exit, call emergency services from outside, do not re-enter.
+---
+[gas-003 | gas | HIGH]
+If outdoors during a toxic gas release: move crosswind or upwind from the source immediately. Do not run directly away if that means running downwind. For gases heavier than air (chlorine, hydrogen sulfide), crouching low makes it worse — move out of the area fast. Cover nose and mouth with a wet cloth as a temporary measure only.
+---
+[gas-004 | gas | HIGH]
+Shelter-in-place for airborne toxic gas cloud: go indoors to an interior room. For heavy gases (chlorine, H2S): upper floor. For lighter gases (ammonia): ground floor. Seal door and window gaps with wet towels or tape. Turn off all HVAC and ventilation. Do not light any flames. Tune to emergency radio for all-clear announcement.
+---
+[gas-005 | gas | HIGH]
+Industrial or pipeline gas leak near home: call emergency services (119 in Sri Lanka), do not operate any electrical switches or appliances (spark risk), do not use mobile phones inside the building, evacuate upwind, keep bystanders away from the area, and strictly follow HAZMAT team instructions on scene.
+---
+[gas-006 | gas | HIGH]
+Natural gas (LPG/pipeline) leak indoors: if you smell gas, do not switch anything on or off. Do not use your phone inside. Leave the building, keeping the door open as you exit. Call the gas utility company and fire department from outside. Do not re-enter until the building is officially cleared by technicians.
+---
+[sri-lanka-emergency-001 | emergency | HIGH]
+Sri Lanka emergency contact numbers: National Disaster Management Center (NDMC) hotline: 117 or 0701-697-699. Police emergencies: 119. Fire department: 110 or 011-242-1111. Ambulance/Medical: 110 or 1990. District Disaster Management Committee (DMC) contacts available at local Divisional Secretariat offices. Save these numbers in your phone NOW — network congestion during disasters may prevent online lookup.
+---
+[monsoon-001 | monsoon | HIGH]
+Sri Lanka Southwest Monsoon (May to September): highest rainfall on western and southwestern slopes of central highlands. Sabaragamuwa, Uva, and parts of Western Province experience most severe flooding and landslides during this period. Risk areas: Ratnapura, Galle, Matara, Kalutara districts. Check district DMC warnings daily during monsoon season. Evacuation zones should be identified NOW before heavy rain arrives.
+---
+[monsoon-002 | monsoon | HIGH]
+Sri Lanka Northeast Monsoon (December to February): affects northern and eastern regions. Batticaloa, Ampara, Trincomalee, Jaffna districts at highest risk for flooding and coastal erosion. Monitor daily weather bulletins from Meteorology Department. During forecasted heavy rain periods, families in lowlands near rivers must prepare evacuation routes and stay near radios or mobile alerts.
+---
+[monsoon-003 | monsoon | MODERATE]
+Monsoon season preparation in Sri Lanka: stock 2-week emergency supplies starting one month before expected monsoon onset. Inform local DMC officers about elderly residents or people with disabilities who may need assistance. Secure roof tiles and gutters to prevent storm damage. Trim branches overhanging homes. Check that drainage systems are clear of debris. Keep sandbags or plastic sheets on hand to block doors during heavy rain.
+---
+[cyclone-001 | cyclone | HIGH]
+Tropical cyclone or severe cyclonic storm approaching Sri Lanka: if sustained winds are forecast above 100 km/h with storm surge warning, evacuate coastal and low-lying areas to high ground immediately. Go to designated shelters in inland areas far from rivers. Take your emergency kit. Do not return to coastal regions until authorities declare it is safe — return waves and storm surge can persist hours after initial passing.
+---
+[cyclone-002 | cyclone | HIGH]
+If unexpectedly caught in a cyclone indoors: go to the most interior room on the ground floor. Use bathroom, closet, or hallway — these rooms have load-bearing walls. Stay away from windows. If building is damaged and must be evacuated, wait for wind to ease. Do not move in peak wind gusts. After cyclone passes, check for gas leaks, downed power lines, and hazards before moving around freely.
+---
+[water-safety-001 | water | HIGH]
+Drowning can happen silently in seconds. Warning signs: head tilted back, mouth open, gasping quietly, vertical posture in water. Children who slip under water often cannot call for help. If someone appears to be struggling in water, throw flotation device or reach with a pole — do not enter the water unless trained in water rescue. CPR can be performed immediately after rescue; do not wait for ambulance.
+---
+[water-safety-002 | water | MODERATE]
+During floods, contaminated water creates major disease risk. If skin comes into contact with floodwater: wash immediately with soap and clean water. Never drink or cook with floodwater. Boil tap water for at least 1 minute or use bottled water until authorities confirm water safety. Prevent contamination of wells — if well water is discolored or smells, treat as unsafe. Diarrheal diseases spike after floods — maintain strict hygiene.
+---
+[flood-006 | flood | MODERATE]
+Sri Lanka flood-prone districts: Western (esp. Gampaha, Kalutara), Sabaragamuwa (esp. Ratnapura, Kegalle), Uva (Badulla), Central Highlands (Kandy, Matara). These districts experience recurrent flooding during monsoons. Residents should know evacuation routes to high ground NOW — do not wait for warnings. Mark safe meeting points for families in case separation occurs during evacuation.
+---
+[landslide-006 | landslide | HIGH]
+Sri Lanka landslide high-risk periods: May-June (Southwest Monsoon onset) and December-January (Northeast Monsoon). Highest risk areas: Kandy, Nuwara Eliya, Badulla, Kegalle, Matara, Galle. Slopes above villages with history of slides pose extreme danger. If living on or below a slope showing cracks or water seeping out, contact DMC immediately. Do not wait for official evacuation orders — evacuate to safe ground voluntarily if you observe warning signs.
+---
+[earthquake-006 | earthquake | MODERATE]
+Sri Lanka seismic risk zones: coastal areas have higher earthquake risk from Indian Ocean subduction zone. While major earthquakes are less frequent than in neighboring regions, occasional tremors occur. If you feel a strong earthquake, apply Drop-Cover-Hold On method immediately. After earthquake, check neighbors — mutual aid and community response can save lives, especially among elderly and disabled residents.
+---
+[first-aid-001 | first-aid | MODERATE]
+Basic first aid during disaster: keep first aid kit with bandages, antiseptic, pain reliever, anti-diarrheal, antibiotic cream, scissors, tweezers, thermometer. If someone is bleeding severely, apply direct pressure with clean cloth for 10 minutes. Elevate the wound above the heart if possible. For burns: cool with lukewarm water for 10+ minutes (not ice). Do not remove stuck clothing. Seek medical help for all but minor injuries.
+---
+[evacuation-001 | evacuation | HIGH]
+Family evacuation plan: identify safe high ground location reachable in 30 minutes from your home. Plan route using main roads first, then alternate routes. Store written plan with emergency contacts and meeting points. Practice evacuation with family members annually or when there is a natural disaster threat. Ensure all family members know their own evacuation role and can execute it without leadership — children should know to go to high ground even if separated from adults.
+---
+[evacuation-002 | evacuation | MODERATE]
+Evacuation for people with mobility limitations: arrange transport in advance. Identify a family member or volunteer who will help. Have medical needs, medications, and mobility aids packed in an "go-bag" kept ready. Register with local DMC if household includes elderly or disabled persons — they may provide priority transport during mandatory evacuations. Do not wait until warning is issued — prepare all mobility aids and backup power for medical equipment NOW.
+---
+[communication-001 | communication | HIGH]
+During disasters: listen to official channels — Sri Lanka television, radio stations, or Meteorology Department alerts. Do not spread unverified rumors on social media. Share only verified alerts from official sources. Keep mobile phone battery above 50% during disaster risks. Inform family members of a meeting point and out-of-area contact person (someone outside Sri Lanka, harder to contact) so loved ones can check in via that person if local networks are congested.
+---
