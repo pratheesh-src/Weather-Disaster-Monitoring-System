@@ -1,0 +1,521 @@
+#include <Wire.h>
+#include <Adafruit_Sensor.h>
+#include <Adafruit_BMP085.h>
+#include <MPU6050.h>
+#include <DHT.h>
+#include <WiFi.h>
+#include <HTTPClient.h>
+#include <ArduinoJson.h>
+
+// WiFi Credentials
+const char* ssid = "xxx";
+const char* password = "xxx";
+
+// Node.js Server URL
+const char* nodeServerURL = "http://xxx.xxx.xxx.xxx:3000/api/data";
+
+// Sensor Definitions
+#define DHT11_PIN 4
+#define RAIN_SENSOR_PIN 34
+#define SOIL_SENSOR_PIN 35
+#define MQ_SENSOR_PIN 32
+#define ULTRASONIC_TRIG 5
+#define ULTRASONIC_ECHO 18
+#define TILT_SWITCH_PIN 33
+#define WATER_SENSOR_PIN 36
+#define BUZZER_PIN 25
+
+// ─── Buzzer Configuration ─────────────────────────────────────────────────────
+// Beep timing (milliseconds)
+#define BEEP_ON_MS       150    // how long each beep lasts
+#define BEEP_OFF_MS      120    // gap between beeps in one pattern
+#define PATTERN_COOLDOWN 8000   // ms before same pattern can repeat
+
+// MPU6050 instability thresholds
+// These raw accel values (in LSB units at ±2g scale = 16384 LSB/g)
+// Adjust ACCEL_SHAKE_THRESHOLD to tune sensitivity:
+//   2000 = very sensitive (detects small vibrations)
+//   5000 = medium (normal movement)
+//   9000 = high threshold (needs strong shake)
+#define ACCEL_SHAKE_THRESHOLD  4000   // per-axis delta from last reading
+#define GYRO_SHAKE_THRESHOLD   3000   // per-axis gyro delta
+#define MPU_UNSTABLE_COUNT     3      // how many axes must exceed threshold
+
+// Gas Types
+enum GasType {
+  GAS_LPG, GAS_PROPANE, GAS_METHANE, GAS_HYDROGEN,
+  GAS_SMOKE, GAS_ALCOHOL, GAS_CO
+};
+
+// Sensor Objects
+Adafruit_BMP085 bmp;
+MPU6050 mpu;
+DHT dht(DHT11_PIN, DHT11);
+
+// Sensor Status
+bool dhtConnected = false;
+bool bmpConnected = false;
+bool mpuConnected = false;
+bool rainConnected = false;
+bool soilConnected = false;
+bool ultrasonicConnected = false;
+bool tiltConnected = false;
+bool mqConnected = false;
+bool waterLevelConnected = false;
+
+// Sensor values
+float temperature, humidity, pressure, altitude;
+int air_quality, rain_value, soil_moisture, tilt_switch;
+float water_level;
+int water_level_raw;
+float water_level_percentage;
+int16_t ax, ay, az, gx, gy, gz;
+
+// Previous MPU readings for delta comparison
+int16_t prev_ax = 0, prev_ay = 0, prev_az = 0;
+int16_t prev_gx = 0, prev_gy = 0, prev_gz = 0;
+bool mpuFirstReading = true;
+
+// Gas Detection Variables
+int cleanAirBaseline = 0;
+unsigned long lastGasAlert = 0;
+bool gasAlertActive = false;
+String currentAlert = "";
+
+// ─── Buzzer State ─────────────────────────────────────────────────────────────
+struct BuzzerPattern {
+  int beepCount;           // how many beeps
+  unsigned long lastFired; // millis() when pattern last played
+  bool active;             // currently playing?
+  int beepsLeft;           // beeps remaining in current play
+  unsigned long nextEvent; // millis() for next state change
+  bool buzzerOn;           // current buzzer state
+};
+
+BuzzerPattern tiltPattern  = {2, 0, false, 0, 0, false};
+BuzzerPattern mpuPattern   = {5, 0, false, 0, 0, false};
+BuzzerPattern gasPattern   = {3, 0, false, 0, 0, false};
+
+// Gas Safety Thresholds (PPM)
+const int LPG_WARNING      = 200;
+const int LPG_DANGER       = 1000;
+const int PROPANE_WARNING  = 200;
+const int PROPANE_DANGER   = 1000;
+const int METHANE_WARNING  = 1000;
+const int METHANE_DANGER   = 5000;
+const int SMOKE_WARNING    = 50;
+const int SMOKE_DANGER     = 150;
+const int HYDROGEN_WARNING = 100;
+const int HYDROGEN_DANGER  = 500;
+
+// Calibration
+const int RAIN_DRY_VALUE  = 4095;
+const int RAIN_WET_VALUE  = 1000;
+const int SOIL_DRY_VALUE  = 4095;
+const int SOIL_WET_VALUE  = 1500;
+const int RAW_EMPTY       = 20;
+const int RAW_20          = 1500;
+const int RAW_FULL        = 1950;
+const int CALIBRATION_READINGS = 50;
+
+// ─── Setup ────────────────────────────────────────────────────────────────────
+void setup() {
+  Serial.begin(115200);
+  initializeSensors();
+  pinMode(ULTRASONIC_TRIG, OUTPUT);
+  pinMode(ULTRASONIC_ECHO, INPUT);
+  pinMode(TILT_SWITCH_PIN, INPUT_PULLUP);
+  pinMode(BUZZER_PIN, OUTPUT);
+  digitalWrite(BUZZER_PIN, LOW);
+  analogReadResolution(12);
+  calibrateMQ2();
+  connectToWiFi();
+  Serial.println("=== ESP32 FLOOD + GAS MONITOR ===");
+}
+
+// ─── Non-blocking Buzzer Engine ───────────────────────────────────────────────
+// Call this from loop() every cycle. It manages one pattern at a time using
+// millis() so it never blocks sensor reading or WiFi sending.
+
+void triggerPattern(BuzzerPattern &p) {
+  unsigned long now = millis();
+  if (!p.active && (now - p.lastFired >= PATTERN_COOLDOWN)) {
+    p.active     = true;
+    p.beepsLeft  = p.beepCount;
+    p.buzzerOn   = false;
+    p.nextEvent  = now; // start immediately
+  }
+}
+
+void updatePattern(BuzzerPattern &p) {
+  if (!p.active) return;
+  unsigned long now = millis();
+  if (now < p.nextEvent) return;
+
+  if (!p.buzzerOn) {
+    // Turn buzzer ON for this beep
+    digitalWrite(BUZZER_PIN, HIGH);
+    p.buzzerOn  = true;
+    p.nextEvent = now + BEEP_ON_MS;
+  } else {
+    // Turn buzzer OFF after beep
+    digitalWrite(BUZZER_PIN, LOW);
+    p.buzzerOn = false;
+    p.beepsLeft--;
+    if (p.beepsLeft <= 0) {
+      // Pattern finished
+      p.active    = false;
+      p.lastFired = now;
+    } else {
+      p.nextEvent = now + BEEP_OFF_MS;
+    }
+  }
+}
+
+// Priority: only one pattern runs at a time (tilt > gas > mpu)
+void updateBuzzer() {
+  // If any pattern is currently active, only update that one
+  if (tiltPattern.active) { updatePattern(tiltPattern); return; }
+  if (gasPattern.active)  { updatePattern(gasPattern);  return; }
+  if (mpuPattern.active)  { updatePattern(mpuPattern);  return; }
+}
+
+// ─── MPU6050 Instability Detection ───────────────────────────────────────────
+bool isMpuUnstable() {
+  if (!mpuConnected || mpuFirstReading) return false;
+
+  int unstableAxes = 0;
+
+  // Check acceleration deltas
+  if (abs((int)ax - (int)prev_ax) > ACCEL_SHAKE_THRESHOLD) unstableAxes++;
+  if (abs((int)ay - (int)prev_ay) > ACCEL_SHAKE_THRESHOLD) unstableAxes++;
+  if (abs((int)az - (int)prev_az) > ACCEL_SHAKE_THRESHOLD) unstableAxes++;
+
+  // Check gyroscope deltas (gyro is very sensitive to rotation)
+  if (abs((int)gx - (int)prev_gx) > GYRO_SHAKE_THRESHOLD) unstableAxes++;
+  if (abs((int)gy - (int)prev_gy) > GYRO_SHAKE_THRESHOLD) unstableAxes++;
+  if (abs((int)gz - (int)prev_gz) > GYRO_SHAKE_THRESHOLD) unstableAxes++;
+
+  return (unstableAxes >= MPU_UNSTABLE_COUNT);
+}
+
+// ─── WiFi & Server ───────────────────────────────────────────────────────────
+void connectToWiFi() {
+  WiFi.begin(ssid, password);
+  Serial.print("Connecting to WiFi");
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(1000);
+    Serial.print(".");
+    updateBuzzer(); // keep buzzer engine running even during connect
+  }
+  Serial.println("\nConnected! IP: " + WiFi.localIP().toString());
+}
+
+void testServerConnection() {
+  HTTPClient http;
+  http.begin(nodeServerURL);
+  int code = http.GET();
+  Serial.println("Server test: " + String(code == 200 ? "OK" : "FAILED"));
+  http.end();
+}
+
+// ─── Sensor Init & Calibration ───────────────────────────────────────────────
+void initializeSensors() {
+  dht.begin();
+  dhtConnected = true;
+  if (bmp.begin()) bmpConnected = true;
+  else Serial.println("BMP180 not found!");
+  mpu.initialize();
+  if (mpu.testConnection()) mpuConnected = true;
+  else Serial.println("MPU6050 failed!");
+  rainConnected = soilConnected = mqConnected = true;
+  ultrasonicConnected = tiltConnected = waterLevelConnected = true;
+}
+
+void calibrateMQ2() {
+  Serial.println("Calibrating MQ-2...");
+  long sum = 0;
+  for (int i = 0; i < CALIBRATION_READINGS; i++) {
+    sum += analogRead(MQ_SENSOR_PIN);
+    delay(200);
+    updateBuzzer();
+    Serial.print(".");
+  }
+  cleanAirBaseline = sum / CALIBRATION_READINGS;
+  Serial.println("\nBaseline: " + String(cleanAirBaseline));
+  delay(500);
+}
+
+// ─── Gas PPM Calculation ─────────────────────────────────────────────────────
+int calculateGasPPM(int sensorValue, GasType gasType) {
+  int diff = sensorValue - cleanAirBaseline;
+  if (diff < 0) diff = 0;
+  switch (gasType) {
+    case GAS_LPG:      return diff * 0.15;
+    case GAS_PROPANE:  return diff * 0.12;
+    case GAS_METHANE:  return diff * 0.10;
+    case GAS_HYDROGEN: return diff * 0.08;
+    case GAS_SMOKE:    return diff * 0.20;
+    case GAS_ALCOHOL:  return diff * 0.18;
+    case GAS_CO:       return diff * 0.05;
+    default:           return diff * 0.10;
+  }
+}
+
+// ─── Gas Safety Check → triggers 3-beep pattern ──────────────────────────────
+String checkGasSafety(int lpg, int propane, int methane, int smoke, int hydrogen) {
+  bool danger = false;
+  String alerts = "";
+
+  if (lpg >= LPG_DANGER)          { alerts += "LPG_DANGER,";      danger = true; }
+  else if (lpg >= LPG_WARNING)    { alerts += "LPG_WARNING,"; }
+  if (propane >= PROPANE_DANGER)  { alerts += "PROPANE_DANGER,";  danger = true; }
+  else if (propane >= PROPANE_WARNING) { alerts += "PROPANE_WARNING,"; }
+  if (methane >= METHANE_DANGER)  { alerts += "METHANE_DANGER,";  danger = true; }
+  else if (methane >= METHANE_WARNING) { alerts += "METHANE_WARNING,"; }
+  if (smoke >= SMOKE_DANGER)      { alerts += "SMOKE_DANGER,";    danger = true; }
+  else if (smoke >= SMOKE_WARNING){ alerts += "SMOKE_WARNING,"; }
+  if (hydrogen >= HYDROGEN_DANGER){ alerts += "HYDROGEN_DANGER,"; danger = true; }
+  else if (hydrogen >= HYDROGEN_WARNING) { alerts += "HYDROGEN_WARNING,"; }
+
+  if (danger) {
+    // 3 beeps for gas danger
+    triggerPattern(gasPattern);
+    gasAlertActive = true;
+    currentAlert   = "GAS DANGER: " + alerts;
+    Serial.println("🚨 GAS ALERT → 3 beeps: " + alerts);
+  } else if (alerts == "") {
+    alerts = "AIR_SAFE";
+    gasAlertActive = false;
+    currentAlert   = "";
+  }
+
+  return alerts;
+}
+
+// ─── Water Level Sensor ───────────────────────────────────────────────────────
+void readWaterLevelSensor() {
+  water_level_raw = analogRead(WATER_SENSOR_PIN);
+  if (water_level_raw <= RAW_EMPTY)
+    water_level_percentage = 0;
+  else if (water_level_raw <= RAW_20)
+    water_level_percentage = map(water_level_raw, RAW_EMPTY, RAW_20, 0, 20);
+  else if (water_level_raw <= RAW_FULL)
+    water_level_percentage = map(water_level_raw, RAW_20, RAW_FULL, 20, 100);
+  else
+    water_level_percentage = 100;
+  waterLevelConnected = (water_level_raw >= 0 && water_level_raw <= 4095);
+}
+
+// ─── Ultrasonic ───────────────────────────────────────────────────────────────
+void readWaterLevel() {
+  digitalWrite(ULTRASONIC_TRIG, LOW);
+  delayMicroseconds(2);
+  digitalWrite(ULTRASONIC_TRIG, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(ULTRASONIC_TRIG, LOW);
+  long dur = pulseIn(ULTRASONIC_ECHO, HIGH, 30000);
+  if (dur > 0) {
+    water_level = dur * 0.034 / 2;
+    ultrasonicConnected = true;
+  } else {
+    water_level = 0;
+    ultrasonicConnected = false;
+  }
+}
+
+// ─── Read All Sensors ─────────────────────────────────────────────────────────
+void readAllSensors() {
+  // DHT11
+  temperature = dht.readTemperature();
+  humidity    = dht.readHumidity();
+  if (isnan(temperature) || isnan(humidity)) {
+    dhtConnected = false; temperature = 0; humidity = 0;
+  } else { dhtConnected = true; }
+
+  // BMP180
+  if (bmpConnected) {
+    pressure = bmp.readPressure() / 100.0;
+    altitude = 32;
+  }
+
+  // MPU6050 — save previous values before reading new ones
+  if (mpuConnected) {
+    prev_ax = ax; prev_ay = ay; prev_az = az;
+    prev_gx = gx; prev_gy = gy; prev_gz = gz;
+    mpu.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
+
+    // ── MPU instability check → 5 beeps ──────────────────────────────────────
+    if (!mpuFirstReading && isMpuUnstable()) {
+      triggerPattern(mpuPattern);
+      Serial.println("⚡ MPU UNSTABLE → 5 beeps");
+    }
+    mpuFirstReading = false;
+  }
+
+  // Analog sensors
+  rain_value    = analogRead(RAIN_SENSOR_PIN);
+  soil_moisture = analogRead(SOIL_SENSOR_PIN);
+  air_quality   = analogRead(MQ_SENSOR_PIN);
+
+  readWaterLevelSensor();
+  readWaterLevel();
+
+  // ── Tilt sensor check → 2 beeps ──────────────────────────────────────────
+  int prevTilt = tilt_switch;
+  tilt_switch  = digitalRead(TILT_SWITCH_PIN);
+
+  if (tilt_switch == HIGH) { // HIGH = TILTED with INPUT_PULLUP
+    triggerPattern(tiltPattern);
+    if (prevTilt != tilt_switch) { // only log on change
+      Serial.println("🔴 TILT DETECTED → 2 beeps");
+    }
+  }
+}
+
+// ─── JSON Payload ─────────────────────────────────────────────────────────────
+String createJSONPayload() {
+  DynamicJsonDocument doc(4096);
+
+  JsonObject sensor_status = doc.createNestedObject("sensor_status");
+  sensor_status["dht11"]       = dhtConnected;
+  sensor_status["bmp180"]      = bmpConnected;
+  sensor_status["mpu6050"]     = mpuConnected;
+  sensor_status["rain"]        = rainConnected;
+  sensor_status["soil"]        = soilConnected;
+  sensor_status["ultrasonic"]  = ultrasonicConnected;
+  sensor_status["tilt"]        = tiltConnected;
+  sensor_status["mq2"]         = mqConnected;
+  sensor_status["water_level"] = waterLevelConnected;
+
+  JsonObject dht11 = doc.createNestedObject("dht11");
+  dht11["temperature"] = round(temperature * 10) / 10.0;
+  dht11["humidity"]    = round(humidity * 10) / 10.0;
+
+  int rain_pct = map(constrain(rain_value, RAIN_WET_VALUE, RAIN_DRY_VALUE),
+                     RAIN_DRY_VALUE, RAIN_WET_VALUE, 0, 100);
+  JsonObject rain = doc.createNestedObject("rain");
+  rain["raw"]        = rain_value;
+  rain["percentage"] = rain_pct;
+
+  int soil_pct = map(constrain(soil_moisture, SOIL_WET_VALUE, SOIL_DRY_VALUE),
+                     SOIL_DRY_VALUE, SOIL_WET_VALUE, 0, 100);
+  JsonObject soil = doc.createNestedObject("soil");
+  soil["raw"]        = soil_moisture;
+  soil["percentage"] = soil_pct;
+
+  JsonObject ultrasonic = doc.createNestedObject("ultrasonic");
+  ultrasonic["distance"] = round(water_level * 10) / 10.0;
+
+  JsonObject wls = doc.createNestedObject("water_level_sensor");
+  wls["raw"]        = water_level_raw;
+  wls["percentage"] = round(water_level_percentage * 10) / 10.0;
+
+  JsonObject tilt = doc.createNestedObject("tilt");
+  tilt["value"] = tilt_switch;
+  tilt["state"] = (tilt_switch == HIGH) ? "TILTED" : "LEVEL";
+
+  int lpg_ppm      = calculateGasPPM(air_quality, GAS_LPG);
+  int propane_ppm  = calculateGasPPM(air_quality, GAS_PROPANE);
+  int methane_ppm  = calculateGasPPM(air_quality, GAS_METHANE);
+  int hydrogen_ppm = calculateGasPPM(air_quality, GAS_HYDROGEN);
+  int smoke_ppm    = calculateGasPPM(air_quality, GAS_SMOKE);
+  int alcohol_ppm  = calculateGasPPM(air_quality, GAS_ALCOHOL);
+  int co_ppm       = calculateGasPPM(air_quality, GAS_CO);
+
+  String gas_safety = checkGasSafety(lpg_ppm, propane_ppm, methane_ppm,
+                                     smoke_ppm, hydrogen_ppm);
+
+  JsonObject mq2 = doc.createNestedObject("mq2");
+  mq2["raw"]           = air_quality;
+  mq2["baseline"]      = cleanAirBaseline;
+  mq2["lpg"]           = lpg_ppm;
+  mq2["propane"]       = propane_ppm;
+  mq2["methane"]       = methane_ppm;
+  mq2["hydrogen"]      = hydrogen_ppm;
+  mq2["smoke"]         = smoke_ppm;
+  mq2["alcohol"]       = alcohol_ppm;
+  mq2["co"]            = co_ppm;
+  mq2["safety_status"] = gas_safety;
+  mq2["alert_message"] = currentAlert;
+
+  float bmp_temp = bmpConnected ? bmp.readTemperature() : 0;
+  JsonObject bmp180 = doc.createNestedObject("bmp180");
+  bmp180["pressure"]    = round(pressure * 10) / 10.0;
+  bmp180["altitude"]    = round(altitude * 10) / 10.0;
+  bmp180["temperature"] = round(bmp_temp * 10) / 10.0;
+
+  JsonObject mpu6050 = doc.createNestedObject("mpu6050");
+  JsonObject accel   = mpu6050.createNestedObject("acceleration");
+  accel["x"] = ax; accel["y"] = ay; accel["z"] = az;
+  JsonObject gyro = mpu6050.createNestedObject("gyroscope");
+  gyro["x"] = gx; gyro["y"] = gy; gyro["z"] = gz;
+
+  // Include instability flag so dashboard can show it
+  mpu6050["unstable"] = isMpuUnstable();
+
+  doc["timestamp"] = millis();
+
+  String out;
+  serializeJson(doc, out);
+  return out;
+}
+
+// ─── Send to Server ───────────────────────────────────────────────────────────
+bool sendToServer(const char* url, String payload) {
+  HTTPClient http;
+  http.begin(url);
+  http.addHeader("Content-Type", "application/json");
+  int code = http.POST(payload);
+  bool ok  = (code > 0);
+  Serial.println(ok ? "✅ Sent OK" : "❌ Send failed: " + String(code));
+  http.end();
+  return ok;
+}
+
+void sendDataToServer() {
+  if (WiFi.status() != WL_CONNECTED) { connectToWiFi(); return; }
+  String payload = createJSONPayload();
+  Serial.println("Payload: " + payload);
+  sendToServer(nodeServerURL, payload);
+}
+
+// ─── Debug Print ──────────────────────────────────────────────────────────────
+void printSensorReadings() {
+  Serial.println("=== SENSORS ===");
+  Serial.println("Temp:    " + String(temperature) + "°C  Hum: " + String(humidity) + "%");
+  Serial.println("Tilt:    " + String(tilt_switch == HIGH ? "TILTED ⚠️" : "LEVEL ✅"));
+  Serial.println("Rain:    " + String(rain_value));
+  Serial.println("Soil:    " + String(soil_moisture));
+  Serial.println("Ultrasonic: " + String(water_level) + " cm");
+  Serial.println("WaterLvl:   " + String(water_level_percentage, 1) + "% (raw:" + String(water_level_raw) + ")");
+  Serial.println("MPU:    ax=" + String(ax) + " ay=" + String(ay) + " az=" + String(az));
+  Serial.println("MPU unstable: " + String(isMpuUnstable() ? "YES ⚡" : "no"));
+  Serial.println("MQ-2 raw: " + String(air_quality) + "  Gas alert: " + currentAlert);
+  Serial.println("Buzzer — tilt:" + String(tiltPattern.active) +
+                 " mpu:" + String(mpuPattern.active) +
+                 " gas:" + String(gasPattern.active));
+  Serial.println("===============");
+}
+
+// ─── Loop ────────────────────────────────────────────────────────────────────
+void loop() {
+  // ① Run the non-blocking buzzer engine every loop tick
+  updateBuzzer();
+
+  // ② Read sensors (includes tilt/MPU/gas checks which call triggerPattern)
+  readAllSensors();
+
+  // ③ Send data to server
+  sendDataToServer();
+
+  // ④ Debug output
+  printSensorReadings();
+
+  // ⑤ Wait — keep calling updateBuzzer() during the delay so beeps aren't cut off
+  unsigned long waitStart = millis();
+  while (millis() - waitStart < 4000) {
+    updateBuzzer();
+    delay(10);
+  }
+}
